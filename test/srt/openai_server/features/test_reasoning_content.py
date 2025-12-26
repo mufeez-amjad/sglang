@@ -179,6 +179,51 @@ class TestReasoningContentAPI(CustomTestCase):
         assert len(response.choices[0].message.reasoning_content) > 0
         assert len(response.choices[0].message.content) > 0
 
+    def test_nonstreaming_usage_reasoning_tokens_present(self):
+        client = openai.Client(api_key=self.api_key, base_url=self.base_url)
+        payload = {
+            "model": self.model,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": "What is 1+3?",
+                }
+            ],
+            "max_tokens": 100,
+            "extra_body": {"separate_reasoning": True},
+        }
+        response = client.chat.completions.create(**payload)
+
+        assert response.usage is not None
+        assert response.usage.reasoning_tokens is not None
+        assert response.usage.reasoning_tokens > 0
+
+    def test_streaming_usage_reasoning_tokens_present(self):
+        client = openai.Client(api_key=self.api_key, base_url=self.base_url)
+        payload = {
+            "model": self.model,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": "What is 1+3?",
+                }
+            ],
+            "max_tokens": 100,
+            "stream": True,
+            "stream_options": {"include_usage": True},
+            "extra_body": {"separate_reasoning": True},
+        }
+        response = client.chat.completions.create(**payload)
+
+        final_usage = None
+        for chunk in response:
+            if chunk.usage is not None:
+                final_usage = chunk.usage
+
+        assert final_usage is not None
+        assert final_usage.reasoning_tokens is not None
+        assert final_usage.reasoning_tokens > 0
+
 
 class TestReasoningContentWithoutParser(CustomTestCase):
     @classmethod
